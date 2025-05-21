@@ -1,0 +1,1 @@
+# WhatsDoc Automator Application Package
