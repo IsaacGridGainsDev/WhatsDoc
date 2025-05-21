@@ -9,6 +9,8 @@ from app.ui.transcription_panel import TranscriptionPanel
 from app.ui.chat_panel import ChatPanel
 from app.ui.document_panel import DocumentPanel
 from app.ui.automation_panel import AutomationPanel
+from app.ui.login_screen import LoginScreen
+from app.auth.authentication import Authentication
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +28,37 @@ class WhatsDocApp(ctk.CTk):
         self.geometry("1100x700")
         self.minsize(800, 600)
         
+        # Initialize authentication
+        self.auth = Authentication()
+        self.current_user = None
+        
+        # Show login screen first
+        self.withdraw()  # Hide main window until login
+        self.after(100, self.show_login)
+    
+    def show_login(self):
+        """
+        Show login screen
+        """
+        login_screen = LoginScreen(self, on_login_success=self.on_login_success)
+        self.wait_window(login_screen)  # Wait for login window to close
+        
+        # If no user is logged in after login window closes, exit the app
+        if not self.current_user:
+            self.destroy()
+    
+    def on_login_success(self, username):
+        """
+        Called when login is successful
+        """
+        self.current_user = username
+        self.initialize_ui()
+        self.deiconify()  # Show main window
+    
+    def initialize_ui(self):
+        """
+        Initialize the main UI after successful login
+        """
         # Configure grid layout
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -38,6 +71,10 @@ class WhatsDocApp(ctk.CTk):
         # App logo/title
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="WhatsDoc", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        
+        # User info
+        self.user_label = ctk.CTkLabel(self.sidebar_frame, text=f"User: {self.current_user}", font=ctk.CTkFont(size=12))
+        self.user_label.grid(row=0, column=0, padx=20, pady=(50, 0))
         
         # Sidebar buttons
         self.dashboard_button = ctk.CTkButton(self.sidebar_frame, text="Dashboard", command=self.show_dashboard)
@@ -55,6 +92,10 @@ class WhatsDocApp(ctk.CTk):
         self.automation_button = ctk.CTkButton(self.sidebar_frame, text="Automation", command=self.show_automation)
         self.automation_button.grid(row=5, column=0, padx=20, pady=10)
         
+        # Logout button
+        self.logout_button = ctk.CTkButton(self.sidebar_frame, text="Logout", command=self.logout, fg_color="gray")
+        self.logout_button.grid(row=6, column=0, padx=20, pady=(50, 10))
+        
         # Create main frame for content
         self.main_frame = ctk.CTkFrame(self, corner_radius=0)
         self.main_frame.grid(row=0, column=1, rowspan=4, sticky="nsew")
@@ -70,6 +111,21 @@ class WhatsDocApp(ctk.CTk):
         
         # Show dashboard by default
         self.show_dashboard()
+    
+    def logout(self):
+        """
+        Logout the current user
+        """
+        self.auth.logout()
+        self.current_user = None
+        
+        # Clear UI
+        for widget in self.winfo_children():
+            widget.destroy()
+        
+        # Show login screen again
+        self.withdraw()
+        self.after(100, self.show_login)
     
     def show_dashboard(self):
         self.hide_all_frames()
